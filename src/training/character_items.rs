@@ -1,265 +1,280 @@
-use smash::lib::lua_const::*;
-use smash::app:lua_bind::*;
-use crate::common::*;
 use crate::common::consts::*;
-
-pub fn init() {
-    unsafe {
-    }
-}
+use smash::app;
+use smash::cpp::l2c_value::LuaConst;
+use smash::lib::lua_const::*;
 
 pub fn roll_variation() {
-    /// Select an item variation from the menu, if applicable
+    // Select an item variation from the menu, if applicable
+    ()
 }
 
-struct CharItem {
-    const FIGHTER_KIND: i32,
-    const ITEM_KIND: i32,
-    VARIATION: Option<[i32; 8]>, //type? // is 8 enough for the variation types?
+pub struct CharItem {
+    fighter_kind: LuaConst,
+    item_kind: LuaConst,
+    variation: Option<[LuaConst; 8]>,
 }
 
 impl CharItem {
     pub fn is_valid(self) -> bool {
-        /// Checks if the item's character is present
+        // Checks if the item's character is present
+        true
     }
+
     pub fn give_item(self, fighter_id: FighterId) {
-        /// Creates the item and gives it to the player or the CPU
+        // Creates the item and gives it to the player or the CPU
 
         /* Steps:
-        * Call is_valid to check if the item's character is present
-        * Call ItemModule::is_have_item to make sure the fighter doesn't already have an item
-        * Perform any other item-specific checks? May not have to do this
-        * Call roll_variation to get a variation if applicable
-        * Call ItemModule::have_item to spawn the item
-        */
+         * Call is_valid to check if the item's character is present
+         * Call ItemModule::is_have_item to make sure the fighter doesn't already have an item
+         * Perform any other item-specific checks? May not have to do this
+         * Call roll_variation to get a variation if applicable
+         * Call ItemModule::have_item to spawn the item
+         */
+        ()
     }
 }
 
-// TODO: Does this belong in common/consts.rs instead?
-pub struct CharItemSet : CharItem {
-    BANANA: {
-        *FIGHTER_KIND_DIDDY,
-        *ITEM_KIND_BANANA,
-        None,
+pub const CHARITEM_ALL: [CharItem; 35] = [
+    CharItem {
+        fighter_kind: FIGHTER_KIND_DIDDY,
+        item_kind: ITEM_KIND_BANANA,
+        variation: None,
     },
-    BOOK: { // Robin Tome
-        *FIGHTER_KIND_REFLET,
-        *ITEM_KIND_BOOK,
-        None, // TODO: Look at the lua const ITEM_BOOK_STATUS_KIND_BEFORE_BORN
+    CharItem {
+        // Robin Tome
+        fighter_kind: FIGHTER_KIND_REFLET,
+        item_kind: ITEM_KIND_BOOK,
+        variation: None, // TODO: Look at the lua const ITEM_BOOK_STATUS_KIND_BEFORE_BORN
     },
-    BUDDYBOMB: { // Banjo-Kazooie Grenade Egg
-        *FIGHTER_KIND_BUDDY,
-        *ITEM_KIND_BUDDYBOMB,
-        None,
+    CharItem {
+        // Banjo-Kazooie Grenade Egg
+        fighter_kind: FIGHTER_KIND_BUDDY,
+        item_kind: ITEM_KIND_BUDDYBOMB,
+        variation: None,
     },
-    DAISYBOMBHEI: { // Bob-omb
-        *FIGHTER_KIND_DAISY,
-        *ITEM_KIND_BOMBHEI,
-        Some([ // TODO: Are all these needed?
-            *ITEM_VARIATION_BOMBHEI_NORMAL,
-            *ITEM_VARIATION_BOMBHEI_OFFSET,
-            *ITEM_VARIATION_BOMBHEI_TIMEBOMB,
-            *ITEM_VARIATION_BOMBHEI_ADVENTURE,
-            *ITEM_VARIATION_BOMBHEI_SUDDENDEATH,
+    CharItem {
+        // Bob-omb
+        fighter_kind: FIGHTER_KIND_DAISY,
+        item_kind: ITEM_KIND_BOMBHEI,
+        variation: Some([
+            // TODO: Are all these needed?
+            ITEM_VARIATION_BOMBHEI_NORMAL,
+            ITEM_VARIATION_BOMBHEI_OFFSET,
+            ITEM_VARIATION_BOMBHEI_TIMEBOMB,
+            ITEM_VARIATION_BOMBHEI_ADVENTURE,
+            ITEM_VARIATION_BOMBHEI_SUDDENDEATH,
+            ITEM_VARIATION_NONE,
+            ITEM_VARIATION_NONE,
+            ITEM_VARIATION_NONE,
         ]),
     },
-    DAISYDAIKON: { // Turnip
-        *FIGHTER_KIND_DAISY,
-        *ITEM_KIND_DAISYDAIKON,
-        Some([
-            *ITEM_VARIATION_DAISYDAIKON_1, // TODO: Name all the variations
-            *ITEM_VARIATION_DAISYDAIKON_2,
-            *ITEM_VARIATION_DAISYDAIKON_3,
-            *ITEM_VARIATION_DAISYDAIKON_4,
-            *ITEM_VARIATION_DAISYDAIKON_5,
-            *ITEM_VARIATION_DAISYDAIKON_6,
-            *ITEM_VARIATION_DAISYDAIKON_7,
-            *ITEM_VARIATION_DAISYDAIKON_8,
+    CharItem {
+        // Turnip
+        fighter_kind: FIGHTER_KIND_DAISY,
+        item_kind: ITEM_KIND_DAISYDAIKON,
+        variation: Some([
+            ITEM_VARIATION_DAISYDAIKON_1, // TODO: Name all the variations
+            ITEM_VARIATION_DAISYDAIKON_2,
+            ITEM_VARIATION_DAISYDAIKON_3,
+            ITEM_VARIATION_DAISYDAIKON_4,
+            ITEM_VARIATION_DAISYDAIKON_5,
+            ITEM_VARIATION_DAISYDAIKON_6,
+            ITEM_VARIATION_DAISYDAIKON_7,
+            ITEM_VARIATION_DAISYDAIKON_8,
         ]),
     },
-    DAISYDOSEISAN: { // Mr Saturn
-        *FIGHTER_KIND_DAISY,
-        *ITEM_KIND_DOSEISAN,
-        None,
+    CharItem {
+        // Mr Saturn
+        fighter_kind: FIGHTER_KIND_DAISY,
+        item_kind: ITEM_KIND_DOSEISAN,
+        variation: None,
     },
-    DIDDYPEANUTS: {
-        *FIGHTER_KIND_DIDDY,
-        *ITEM_KIND_DIDDYPEANUTS,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_DIDDY,
+        item_kind: ITEM_KIND_DIDDYPEANUTS,
+        variation: None,
     },
-    FUSIN: { // Sheik Sideb Bomb
-        *FIGHTER_KIND_SHEIK,
-        *ITEM_KIND_NONE, // Need to find this item name. FUSIN keeps popping up but there's no item_kind
+    CharItem {
+        // Sheik Sideb Bomb
+        fighter_kind: FIGHTER_KIND_SHEIK,
+        item_kind: ITEM_KIND_NONE, // Need to find this item name. FUSIN keeps popping up but there's no item_kind
+        variation: None,
     },
-    KROOLCROWN: {
-        *FIGHTER_KIND_KROOL,
-        *ITEM_KIND_KROOLCROWN,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_KROOL,
+        item_kind: ITEM_KIND_KROOLCROWN,
+        variation: None,
     },
-    LINKARROW: {
-        *FIGHTER_KIND_LINK,
-        *ITEM_KIND_LINKARROW,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_LINK,
+        item_kind: ITEM_KIND_LINKARROW,
+        variation: None,
     },
-    LINKBOMB: {
-        *FIGHTER_KIND_LINK,
-        *ITEM_KIND_LINKBOMB,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_LINK,
+        item_kind: ITEM_KIND_LINKBOMB,
+        variation: None,
     },
-    MECHAKOOPA: {
-        *FIGHTER_KIND_KOOPAJR,
-        *ITEM_KIND_MECHAKOOPA,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_KOOPAJR,
+        item_kind: ITEM_KIND_MECHAKOOPA,
+        variation: None,
     },
-    METALBLADE: {
-        *FIGHTER_KIND_ROCKMAN,
-        *ITEM_KIND_METALBLADE,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_ROCKMAN,
+        item_kind: ITEM_KIND_METALBLADE,
+        variation: None,
     },
-    MURABITOFRUIT: { // Villager Apple
-        *FIGHTER_KIND_MURABITO,
-        *ITEM_KIND_MURABITOFRUIT,
-        None,
+    CharItem {
+        // Villager Apple
+        fighter_kind: FIGHTER_KIND_MURABITO,
+        item_kind: ITEM_KIND_MURABITOFRUIT,
+        variation: None,
     },
-    PACMANAPPLE: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANAPPLE,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANAPPLE,
+        variation: None,
     },
-    PACMANBELL: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANBELL,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANBELL,
+        variation: None,
     },
-    PACMANBOSS: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANBOSS,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANBOSS,
+        variation: None,
     },
-    PACMANCHERRY: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANCHERRY,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANCHERRY,
+        variation: None,
     },
-    PACMANKEY: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANKEY,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANKEY,
+        variation: None,
     },
-    PACMANMELON: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANMELON,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANMELON,
+        variation: None,
     },
-    PACMANORANGE: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANORANGE,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANORANGE,
+        variation: None,
     },
-    PACMANSTRAWBERRY: {
-        *FIGHTER_KIND_PACMAN,
-        *ITEM_KIND_PACMANSTRAWBERRY,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_PACMAN,
+        item_kind: ITEM_KIND_PACMANSTRAWBERRY,
+        variation: None,
     },
-    PEACHBOMBHEI: { // Bob-omb
-        *FIGHTER_KIND_PEACH,
-        *ITEM_KIND_BOMBHEI,
-        Some([ // TODO: Are all these needed?
-            *ITEM_VARIATION_BOMBHEI_NORMAL,
-            *ITEM_VARIATION_BOMBHEI_OFFSET,
-            *ITEM_VARIATION_BOMBHEI_TIMEBOMB,
-            *ITEM_VARIATION_BOMBHEI_ADVENTURE,
-            *ITEM_VARIATION_BOMBHEI_SUDDENDEATH,
+    CharItem {
+        // Bob-omb
+        fighter_kind: FIGHTER_KIND_PEACH,
+        item_kind: ITEM_KIND_BOMBHEI,
+        variation: Some([
+            // TODO: Are all these needed?
+            ITEM_VARIATION_BOMBHEI_NORMAL,
+            ITEM_VARIATION_BOMBHEI_OFFSET,
+            ITEM_VARIATION_BOMBHEI_TIMEBOMB,
+            ITEM_VARIATION_BOMBHEI_ADVENTURE,
+            ITEM_VARIATION_BOMBHEI_SUDDENDEATH,
+            ITEM_VARIATION_NONE,
+            ITEM_VARIATION_NONE,
+            ITEM_VARIATION_NONE,
         ]),
     },
-    PEACHDAIKON: { // Turnip
-        *FIGHTER_KIND_PEACH,
-        *ITEM_KIND_PEACHDAIKON,
-        Some([
-            *ITEM_VARIATION_PEACHDAIKON_1,
-            *ITEM_VARIATION_PEACHDAIKON_2,
-            *ITEM_VARIATION_PEACHDAIKON_3,
-            *ITEM_VARIATION_PEACHDAIKON_4,
-            *ITEM_VARIATION_PEACHDAIKON_5,
-            *ITEM_VARIATION_PEACHDAIKON_6,
-            *ITEM_VARIATION_PEACHDAIKON_7,
-            *ITEM_VARIATION_PEACHDAIKON_8,
+    CharItem {
+        // Turnip
+        fighter_kind: FIGHTER_KIND_PEACH,
+        item_kind: ITEM_KIND_PEACHDAIKON,
+        variation: Some([
+            ITEM_VARIATION_PEACHDAIKON_1,
+            ITEM_VARIATION_PEACHDAIKON_2,
+            ITEM_VARIATION_PEACHDAIKON_3,
+            ITEM_VARIATION_PEACHDAIKON_4,
+            ITEM_VARIATION_PEACHDAIKON_5,
+            ITEM_VARIATION_PEACHDAIKON_6,
+            ITEM_VARIATION_PEACHDAIKON_7,
+            ITEM_VARIATION_PEACHDAIKON_8,
         ]),
     },
-    PEACHDOSEISAN: { // Mr Saturn
-        *FIGHTER_KIND_PEACH,
-        *ITEM_KIND_DOSEISAN,
-        None,
+    CharItem {
+        // Mr Saturn
+        fighter_kind: FIGHTER_KIND_PEACH,
+        item_kind: ITEM_KIND_DOSEISAN,
+        variation: None,
     },
-    RICHTERHOLYWATER: {
-        *FIGHTER_KIND_RICHTER,
-        *ITEM_KIND_RICHTERHOLYWATER,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_RICHTER,
+        item_kind: ITEM_KIND_RICHTERHOLYWATER,
+        variation: None,
     },
-    ROBOTGYRO: {
-        *FIGHTER_KIND_ROBOT,
-        *ITEM_KIND_ROBOTGYRO,
-        Some([ // TODO: Are all these needed?
-            *ITEM_VARIATION_ROBOTGYRO_1P,
-            *ITEM_VARIATION_ROBOTGYRO_2P,
-            *ITEM_VARIATION_ROBOTGYRO_3P,
-            *ITEM_VARIATION_ROBOTGYRO_4P,
-            *ITEM_VARIATION_ROBOTGYRO_5P,
-            *ITEM_VARIATION_ROBOTGYRO_6P,
-            *ITEM_VARIATION_ROBOTGYRO_7P,
-            *ITEM_VARIATION_ROBOTGYRO_8P,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_ROBOT,
+        item_kind: ITEM_KIND_ROBOTGYRO,
+        variation: Some([
+            // TODO: Are all these needed?
+            ITEM_VARIATION_ROBOTGYRO_1P,
+            ITEM_VARIATION_ROBOTGYRO_2P,
+            ITEM_VARIATION_ROBOTGYRO_3P,
+            ITEM_VARIATION_ROBOTGYRO_4P,
+            ITEM_VARIATION_ROBOTGYRO_5P,
+            ITEM_VARIATION_ROBOTGYRO_6P,
+            ITEM_VARIATION_ROBOTGYRO_7P,
+            ITEM_VARIATION_ROBOTGYRO_8P,
         ]),
     },
-    SIMONHOLYWATER: {
-        *FIGHTER_KIND_SIMON,
-        *ITEM_KIND_SIMONHOLYWATER,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_SIMON,
+        item_kind: ITEM_KIND_SIMONHOLYWATER,
+        variation: None,
     },
-    SNAKECBOX: { // Cardboard Box from Taunt
-        *FIGHTER_KIND_SNAKE,
-        *ITEM_KIND_SNAKECBOX,
-        None,
+    CharItem {
+        // Cardboard Box from Taunt
+        fighter_kind: FIGHTER_KIND_SNAKE,
+        item_kind: ITEM_KIND_SNAKECBOX,
+        variation: None,
     },
-    SNAKEGRENADE: {
-        *FIGHTER_KIND_SNAKE,
-        *ITEM_KIND_SNAKEGRENADE,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_SNAKE,
+        item_kind: ITEM_KIND_SNAKEGRENADE,
+        variation: None,
     },
-    THUNDERSWORD: { // Robin Levin Sword
-        *FIGHTER_KIND_REFLET,
-        *ITEM_KIND_THUNDERSWORD,
-        None,
+    CharItem {
+        // Robin Levin Sword
+        fighter_kind: FIGHTER_KIND_REFLET,
+        item_kind: ITEM_KIND_THUNDERSWORD,
+        variation: None,
     },
-    TOONLINKBOMB: {
-        *FIGHTER_KIND_TOONLINK,
-        *ITEM_KIND_TOONLINKBOMB,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_TOONLINK,
+        item_kind: ITEM_KIND_TOONLINKBOMB,
+        variation: None,
     },
-    WARIOBIKE: {
-        *FIGHTER_KIND_WARIO,
-        *ITEM_KIND_WARIOBIKE,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_WARIO,
+        item_kind: ITEM_KIND_WARIOBIKE,
         // Pretty sure these other ones are just the bike parts
         // ITEM_KIND_WARIOBIKEA,
         // ITEM_KIND_WARIOBIKEB,
         // ITEM_KIND_WARIOBIKEC,
         // ITEM_KIND_WARIOBIKED,
         // ITEM_KIND_WARIOBIKEE,
-        None,
+        variation: None,
     },
-    WOOD: { // Villager wood chip?
-        *FIGHTER_KIND_MURABITO,
-        *ITEM_KIND_WOOD,
-        None,
+    CharItem {
+        // Villager wood chip?
+        fighter_kind: FIGHTER_KIND_MURABITO,
+        item_kind: ITEM_KIND_WOOD,
+        variation: None,
     },
-    YOUNGLINKBOMB: {
-        *FIGHTER_KIND_YOUNGLINK,
-        *ITEM_KIND_YOUNGLINKBOMB,
-        None,
+    CharItem {
+        fighter_kind: FIGHTER_KIND_YOUNGLINK,
+        item_kind: ITEM_KIND_YOUNGLINKBOMB,
+        variation: None,
     },
-}
-
-impl CharItemSet {
-    pub fn get_valid_items(self) {
-        /// Return the CharItems for which is_valid == true
-    }
-}
+];

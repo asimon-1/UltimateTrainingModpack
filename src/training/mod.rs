@@ -1,20 +1,21 @@
 use crate::common::{is_training_mode, FIGHTER_MANAGER_ADDR, STAGE_MANAGER_ADDR};
 use crate::hitbox_visualizer;
-use skyline::nn::ro::LookupSymbol;
 use skyline::nn::hid::*;
-use smash::app::{self, lua_bind::*};
+use skyline::nn::ro::LookupSymbol;
+use smash::app::{self, lua_bind::*, utility};
 use smash::lib::lua_const::*;
 use smash::params::*;
 
 pub mod combo;
 pub mod directional_influence;
+pub mod ledge;
 pub mod sdi;
 pub mod shield;
 pub mod tech;
-pub mod ledge;
 
 mod air_dodge_direction;
 mod attack_angle;
+mod character_items;
 mod character_specific;
 mod fast_fall;
 mod frame_counter;
@@ -103,6 +104,7 @@ fn once_per_frame_per_fighter(
         hitbox_visualizer::get_command_flag_cat(module_accessor);
         save_states::save_states(module_accessor);
         tech::get_command_flag_cat(module_accessor);
+        store_fighter_kind(module_accessor);
     }
 
     fast_fall::get_command_flag_cat(module_accessor);
@@ -158,20 +160,19 @@ pub unsafe fn get_stick_x(module_accessor: &mut app::BattleObjectModuleAccessor)
     air_dodge_direction::mod_get_stick_x(module_accessor).unwrap_or(ori)
 }
 
-
 /**
  * Called when:
  * angled ftilt/fsmash
  */
- #[skyline::hook(replace = ControlModule::get_stick_dir)]
- pub unsafe fn get_stick_dir(module_accessor: &mut app::BattleObjectModuleAccessor) -> f32 {
-     let ori = original!()(module_accessor);
-     if !is_training_mode() {
-         return ori;
-     }
+#[skyline::hook(replace = ControlModule::get_stick_dir)]
+pub unsafe fn get_stick_dir(module_accessor: &mut app::BattleObjectModuleAccessor) -> f32 {
+    let ori = original!()(module_accessor);
+    if !is_training_mode() {
+        return ori;
+    }
 
-     attack_angle::mod_get_stick_dir(module_accessor).unwrap_or(ori)
- }
+    attack_angle::mod_get_stick_dir(module_accessor).unwrap_or(ori)
+}
 
 /**
  *
@@ -318,7 +319,8 @@ create_nn_hid_hooks!(
     (GetNpadGcState, handle_get_npad_gc_state),
     (GetNpadJoyDualState, handle_get_joy_dual_state),
     (GetNpadJoyLeftState, handle_get_joy_left_state),
-    (GetNpadJoyRightState, handle_get_joy_right_state));
+    (GetNpadJoyRightState, handle_get_joy_right_state)
+);
 
 pub fn training_mods() {
     println!("[Training Modpack] Applying training mods.");
@@ -330,21 +332,22 @@ pub fn training_mods() {
         handle_get_npad_gc_state,
         handle_get_joy_dual_state,
         handle_get_joy_left_state,
-        handle_get_joy_right_state);
+        handle_get_joy_right_state
+    );
 
     unsafe {
         LookupSymbol(
             &mut FIGHTER_MANAGER_ADDR,
             "_ZN3lib9SingletonIN3app14FighterManagerEE9instance_E\u{0}"
-                .as_bytes()
-                .as_ptr(),
+            .as_bytes()
+            .as_ptr(),
         );
 
         LookupSymbol(
             &mut STAGE_MANAGER_ADDR,
             "_ZN3lib9SingletonIN3app12StageManagerEE9instance_E\u{0}"
-                .as_bytes()
-                .as_ptr(),
+            .as_bytes()
+            .as_ptr(),
         );
 
         smash::params::add_hook(params_main).unwrap();
@@ -383,4 +386,14 @@ pub fn training_mods() {
     fast_fall::init();
     mash::init();
     ledge::init();
+}
+
+pub static mut FIGHTER_KINDS: [i32; 8] = [-1; 8];
+
+pub unsafe fn store_fighter_kind(module_accessor: &mut app::BattleObjectModuleAccessor) {
+    let entry_id: usize =
+    WorkModule::get_int(module_accessor, *FIGHTER_INSTANCE_WORK_ID_INT_ENTRY_ID) as usize;
+    if FIGHTER_KINDS[entry_id] != -1 {
+        FIGHTER_KINDS[entry_id] = utility::get_kind(module_accessor);
+    }
 }
