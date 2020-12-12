@@ -104,7 +104,6 @@ fn once_per_frame_per_fighter(
         hitbox_visualizer::get_command_flag_cat(module_accessor);
         save_states::save_states(module_accessor);
         tech::get_command_flag_cat(module_accessor);
-        store_fighter_kind(module_accessor);
     }
 
     fast_fall::get_command_flag_cat(module_accessor);
@@ -386,14 +385,4 @@ pub fn training_mods() {
     fast_fall::init();
     mash::init();
     ledge::init();
-}
-
-pub static mut FIGHTER_KINDS: [i32; 8] = [-1; 8];
-
-pub unsafe fn store_fighter_kind(module_accessor: &mut app::BattleObjectModuleAccessor) {
-    let entry_id: usize =
-    WorkModule::get_int(module_accessor, *FIGHTER_INSTANCE_WORK_ID_INT_ENTRY_ID) as usize;
-    if FIGHTER_KINDS[entry_id] != -1 {
-        FIGHTER_KINDS[entry_id] = utility::get_kind(module_accessor);
-    }
 }

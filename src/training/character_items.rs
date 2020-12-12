@@ -1,11 +1,29 @@
 use crate::common::consts::*;
+use crate::common::*;
 use smash::app;
+use smash::app::lua_bind::*;
+use smash::app::utility;
 use smash::cpp::l2c_value::LuaConst;
 use smash::lib::lua_const::*;
 
-pub fn roll_variation() {
+static mut FIGHTER_KINDS: [i32; 2] = [-1; 2];
+
+pub fn store_fighter_kinds() {
+    unsafe {
+        if FIGHTER_KINDS[0] != -1 {
+            // Player
+            FIGHTER_KINDS[0] = utility::get_kind(&mut *get_module_accessor(FighterId::Player));
+        }
+        if FIGHTER_KINDS[1] != -1 {
+            // CPU
+            FIGHTER_KINDS[1] = utility::get_kind(&mut *get_module_accessor(FighterId::CPU));
+        }
+    }
+}
+
+pub fn roll_variation() -> i32 {
     // Select an item variation from the menu, if applicable
-    ()
+    0
 }
 
 pub struct CharItem {
@@ -15,23 +33,40 @@ pub struct CharItem {
 }
 
 impl CharItem {
-    pub fn is_valid(self) -> bool {
+    pub unsafe fn is_valid(self, fighter_kinds: [i32; 2]) -> bool {
         // Checks if the item's character is present
-        true
+        fighter_kinds.contains(&self.fighter_kind)
+    }
+}
+
+pub unsafe fn give_item(item: CharItem, module_accessor: &mut app::BattleObjectModuleAccessor) {
+    // Creates the item and gives it to the player
+    if is_operation_cpu(module_accessor) {
+        return;
     }
 
-    pub fn give_item(self, fighter_id: FighterId) {
-        // Creates the item and gives it to the player or the CPU
-
-        /* Steps:
-         * Call is_valid to check if the item's character is present
-         * Call ItemModule::is_have_item to make sure the fighter doesn't already have an item
-         * Perform any other item-specific checks? May not have to do this
-         * Call roll_variation to get a variation if applicable
-         * Call ItemModule::have_item to spawn the item
-         */
-        ()
+    // Shortcut is GRAB + TAUNT_LEFT
+    if !(ControlModule::check_button_on(module_accessor, *CONTROL_PAD_BUTTON_CATCH)
+        && ControlModule::check_button_trigger(module_accessor, *CONTROL_PAD_BUTTON_APPEAL_S_L))
+    {
+        return;
     }
+    let item_kind = app::ItemKind(*item.item_kind);
+
+    if !item.is_valid(FIGHTER_KINDS) {
+        // Ensure the item's character is present
+        return;
+    }
+
+    if ItemModule::is_have_item(module_accessor, 0) {
+        // Ensure the player doesn't already have an item
+        return;
+    }
+
+    let variation = roll_variation();
+
+    // TODO: Is this how the variation is used?
+    ItemModule::have_item(module_accessor, item_kind, variation, 0, false, false);
 }
 
 pub const CHARITEM_ALL: [CharItem; 35] = [
