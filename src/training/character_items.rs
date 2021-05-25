@@ -35,6 +35,7 @@ pub struct CharItem {
 impl CharItem {
     pub unsafe fn is_valid(self, fighter_kinds: [i32; 2]) -> bool {
         // Checks if the item's character is present
+        store_fighter_kinds();
         fighter_kinds.contains(&self.fighter_kind)
     }
 }
@@ -108,14 +109,14 @@ pub const CHARITEM_ALL: [CharItem; 35] = [
         fighter_kind: FIGHTER_KIND_DAISY,
         item_kind: ITEM_KIND_DAISYDAIKON,
         variation: Some([
-            ITEM_VARIATION_DAISYDAIKON_1, // TODO: Name all the variations
-            ITEM_VARIATION_DAISYDAIKON_2,
-            ITEM_VARIATION_DAISYDAIKON_3,
-            ITEM_VARIATION_DAISYDAIKON_4,
-            ITEM_VARIATION_DAISYDAIKON_5,
-            ITEM_VARIATION_DAISYDAIKON_6,
-            ITEM_VARIATION_DAISYDAIKON_7,
-            ITEM_VARIATION_DAISYDAIKON_8,
+            ITEM_VARIATION_DAISYDAIKON_1, // Smile
+            ITEM_VARIATION_DAISYDAIKON_2, // Irked
+            ITEM_VARIATION_DAISYDAIKON_3, // Shut-Eye
+            ITEM_VARIATION_DAISYDAIKON_4, // Spooked
+            ITEM_VARIATION_DAISYDAIKON_5, // Anime
+            ITEM_VARIATION_DAISYDAIKON_6, // Winky
+            ITEM_VARIATION_DAISYDAIKON_7, // Dot-Eyes
+            ITEM_VARIATION_DAISYDAIKON_8, // Stitch-face
         ]),
     },
     CharItem {
@@ -132,7 +133,7 @@ pub const CHARITEM_ALL: [CharItem; 35] = [
     CharItem {
         // Sheik Sideb Bomb
         fighter_kind: FIGHTER_KIND_SHEIK,
-        item_kind: ITEM_KIND_NONE, // Need to find this item name. FUSIN keeps popping up but there's no item_kind
+        item_kind: ITEM_KIND_EXPLOSIONBOMB,
         variation: None,
     },
     CharItem {
@@ -227,14 +228,14 @@ pub const CHARITEM_ALL: [CharItem; 35] = [
         fighter_kind: FIGHTER_KIND_PEACH,
         item_kind: ITEM_KIND_PEACHDAIKON,
         variation: Some([
-            ITEM_VARIATION_PEACHDAIKON_1,
-            ITEM_VARIATION_PEACHDAIKON_2,
-            ITEM_VARIATION_PEACHDAIKON_3,
-            ITEM_VARIATION_PEACHDAIKON_4,
-            ITEM_VARIATION_PEACHDAIKON_5,
-            ITEM_VARIATION_PEACHDAIKON_6,
-            ITEM_VARIATION_PEACHDAIKON_7,
-            ITEM_VARIATION_PEACHDAIKON_8,
+            ITEM_VARIATION_PEACHDAIKON_1, // Smile
+            ITEM_VARIATION_PEACHDAIKON_2, // Irked
+            ITEM_VARIATION_PEACHDAIKON_3, // Shut-Eye
+            ITEM_VARIATION_PEACHDAIKON_4, // Spooked
+            ITEM_VARIATION_PEACHDAIKON_5, // Anime
+            ITEM_VARIATION_PEACHDAIKON_6, // Winky
+            ITEM_VARIATION_PEACHDAIKON_7, // Dot-Eyes
+            ITEM_VARIATION_PEACHDAIKON_8, // Stitch-Face
         ]),
     },
     CharItem {
