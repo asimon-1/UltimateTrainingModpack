@@ -40,6 +40,8 @@ log = "0.4.17"
 byte-unit = "4.0.18"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 anyhow = "1.0.72"
+rust-i18n = "3.0.1"
+smash-arc = { git = "https://github.com/jam1garner/smash-arc", features = ["smash-runtime", "rust-zstd", "serialize"] }
 
 [patch.crates-io]
 native-tls = { git = "https://github.com/skyline-rs/rust-native-tls", branch = "switch-timeout-panic" }
@@ -65,3 +67,7 @@ plugin-dependencies = [
 [features]
 outside_training_mode = []
 layout_arc_from_file = []
+
+[package.metadata.i18n]
+default-locale = "us_en"
+load-path = "locales"

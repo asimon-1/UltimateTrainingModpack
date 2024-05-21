@@ -15,6 +15,11 @@
     clippy::transmute_num_to_bytes
 )]
 
+
+#[macro_use]
+extern crate rust_i18n;
+i18n!("locales", fallback="us_en");
+
 use std::fs;
 use std::path::PathBuf;
 
@@ -22,6 +27,7 @@ use skyline::nro::{self, NroInfo};
 use training_mod_consts::{OnOff, LEGACY_TRAINING_MODPACK_ROOT};
 
 use crate::common::button_config::DEFAULT_OPEN_MENU_CONFIG;
+use crate::common::localization::set_language;
 use crate::common::events::events_loop;
 use crate::common::*;
 use crate::consts::TRAINING_MODPACK_ROOT;
@@ -74,9 +80,12 @@ pub fn main() {
 
     info!("Initialized.");
 
+    unsafe { set_language(); }
+
+
     unsafe {
         EVENT_QUEUE.push(Event::smash_open());
-        notification("Training Modpack".to_string(), "Welcome!".to_string(), 60);
+        notification(t!("Training Modpack").to_string(), "Welcome!".to_string(), 60);
     }
 
     hitbox_visualizer::hitbox_visualization();
