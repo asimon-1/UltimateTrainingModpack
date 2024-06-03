@@ -1,55 +1,23 @@
-// See also Arcropolis' implementation which uses the Smash game data instead https://github.com/Raytwo/ARCropolis/blob/master/src/utils.rs#L90 
-// See also this function 0x355aa8c https://discord.com/channels/447823426061860879/516439596322652161/777146109315383306
-
-// Region::None => write!(f, ""),
-// Region::Japanese => write!(f, "jp_ja"),
-// Region::UsEnglish => write!(f, "us_en"),
-// Region::UsFrench => write!(f, "us_fr"),
-// Region::UsSpanish => write!(f, "us_es"),
-// Region::EuEnglish => write!(f, "eu_en"),
-// Region::EuFrench => write!(f, "eu_fr"),
-// Region::EuSpanish => write!(f, "eu_es"),
-// Region::EuGerman => write!(f, "eu_de"),
-// Region::EuDutch => write!(f, "eu_nl"),
-// Region::EuItalian => write!(f, "eu_it"),
-// Region::EuRussian => write!(f, "eu_ru"),
-// Region::Korean => write!(f, "kr_ko"),
-// Region::ChinaChinese => write!(f, "zh_cn"),
-// Region::TaiwanChinese => write!(f, "zh_tw"),
+// Region::None : ""
+// Region::Japanese : "jp_ja"
+// Region::UsEnglish : "us_en"
+// Region::UsFrench : "us_fr"
+// Region::UsSpanish : "us_es"
+// Region::EuEnglish : "eu_en"
+// Region::EuFrench : "eu_fr"
+// Region::EuSpanish : "eu_es"
+// Region::EuGerman : "eu_de"
+// Region::EuDutch : "eu_nl"
+// Region::EuItalian : "eu_it"
+// Region::EuRussian : "eu_ru"
+// Region::Korean : "kr_ko"
+// Region::ChinaChinese : "zh_cn"
+// Region::TaiwanChinese : "zh_tw"
 
 use skyline::nn::oe::get_desired_language;
 use skyline::nn::account;
 use crate::logging::*;
 use crate::common::offsets::OFFSET_GET_SYSTEM_LOCALE;
-
-pub unsafe fn _set_language_from_system() {
-    let desired_language = get_desired_language();
-    let locale = desired_language.trim_matches('\0'); // There might be a some extra null bytes at the end
-    info!("Setting language to {}", locale);
-    rust_i18n::set_locale(locale);
-}
-
-pub unsafe fn set_language() {
-    nn::account::Initialize();
-    mount_save("save\0");
-    let language_id = get_language_id_in_savedata();
-    unmount_save("save\0");
-    if let Ok(save_language_id) = language_id {
-        dbg!(&save_language_id);
-        let region = get_system_region_from_language_id(save_language_id);
-        dbg!(&region);
-        info!("Setting language to {}", region);
-        rust_i18n::set_locale(format!("{}", region).as_str());
-    } else {
-        warn!("Could not find language in save data, falling back to us_en");
-        rust_i18n::set_locale("us_en");
-    }
-
-}
-
-
-
-// Stoled from Arcropolis
 use skyline::nn;
 use smash_arc::Region;
 use std::io::{Read, Result, Seek, SeekFrom};
@@ -89,22 +57,38 @@ impl From<u8> for SaveLanguageId {
     }
 }
 
+pub unsafe fn _set_language_from_system() {
+    let desired_language = get_desired_language();
+    let locale = desired_language.trim_matches('\0'); // There might be a some extra null bytes at the end
+    info!("Setting language to {}", locale);
+    rust_i18n::set_locale(locale);
+}
+
+pub unsafe fn set_language() {
+    nn::account::Initialize();
+    mount_save("save\0");
+    let language_id = get_language_id_in_savedata();
+    unmount_save("save\0");
+    if let Ok(save_language_id) = language_id {
+        dbg!(&save_language_id);
+        let region = get_system_region_from_language_id(save_language_id);
+        dbg!(&region);
+        info!("Setting language to {}", region);
+        rust_i18n::set_locale(format!("{}", region).as_str());
+    } else {
+        warn!("Could not find language in save data, falling back to us_en");
+        rust_i18n::set_locale("us_en");
+    }
+}
+
 pub fn mount_save(mount_path: &str) {
-    // TODO: Call nn::fs::CheckMountName
-    // This provides a UserHandle and sets the User in a Open state to be used.
     let handle = nn::account::try_open_preselected_user().expect("OpenPreselectedUser should not return false");
-    // Obtain the UID for this user
     let uid = nn::account::get_user_id(&handle).expect("GetUserId should return a valid Uid");
-
     unsafe { nn::fs::MountSaveData(skyline::c_str(&format!("{}\0", mount_path)), &uid) };
-
-    // This closes the UserHandle, making it unusable, and sets the User in a Closed state.
-    // Smash will crash if you don't do it.
     nn::account::close_user(handle);
 }
 
 pub fn unmount_save(mount_path: &str) {
-    // TODO: Call nn::fs::CheckMountName
     unsafe { nn::fs::Unmount(skyline::c_str(&format!("{}\0", mount_path))) };
 }
 
