@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ptr::addr_of_mut;
 
 use skyline::nn::ui2d::ResColor;
@@ -69,7 +70,7 @@ pub fn color_notification(header: String, message: String, len: u32, color: ResC
     }
 }
 
-pub fn clear_notifications(header: &'static str) {
+pub fn clear_notifications(header: Cow<'static, str>) {
     unsafe {
         let queue = addr_of_mut!(QUEUE);
         (*queue).retain(|notif| notif.header != header);

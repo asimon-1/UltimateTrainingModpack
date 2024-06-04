@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
@@ -414,9 +415,9 @@ unsafe fn render_confirmation_page(app: &mut App, root_pane: &Pane) {
                     let title_bg_material = &mut *title_bg.material;
 
                     if col == no_col {
-                        title_text.set_text_string("No");
+                        title_text.set_text_string(t!("No").as_ref());
                     } else if col == yes_col {
-                        title_text.set_text_string("Yes");
+                        title_text.set_text_string(t!("Yes").as_ref());
                     }
                     let is_selected = (col == no_col
                         && app.confirmation_state == ConfirmationState::HoverNo)
@@ -438,7 +439,7 @@ unsafe fn render_confirmation_page(app: &mut App, root_pane: &Pane) {
                     }
 
                     // Hide all submenu icons, since we're not on the submenu page
-                    // TODO: Do we want to show the check on "Yes" and a red "X" on "No?"
+                    // TODO: Do we want to show the check on 'Yes'")' and a red 'X' on 'No'?
                     for t in app.tabs.iter() {
                         for s in t.submenus.iter() {
                             let pane = menu_button.find_pane_by_name_recursive(s.id);
@@ -483,7 +484,7 @@ pub unsafe fn draw(root_pane: &Pane) {
     if let Some(quit_button) = root_pane.find_pane_by_name_recursive("TrModTitle") {
         for quit_txt_s in &["set_txt_00", "set_txt_01"] {
             if let Some(quit_txt) = quit_button.find_pane_by_name_recursive(quit_txt_s) {
-                quit_txt.as_textbox().set_text_string("Modpack Menu");
+                quit_txt.as_textbox().set_text_string(t!("Modpack Menu").as_ref());
             }
         }
     }
@@ -530,12 +531,14 @@ pub unsafe fn draw(root_pane: &Pane) {
         app.tabs
             .get_before_selected()
             .expect("No tab selected!")
-            .title,
-        app.tabs.get_selected().expect("No tab selected!").title,
+            .title
+            .clone(),
+        app.tabs.get_selected().expect("No tab selected!").title.clone(),
         app.tabs
             .get_after_selected()
             .expect("No tab selected!")
-            .title,
+            .title
+            .clone(),
     ];
 
     let is_gcc = (*common::menu::P1_CONTROLLER_STYLE.data_ptr()) == ControllerStyle::GCController;
@@ -592,13 +595,13 @@ pub unsafe fn draw(root_pane: &Pane) {
             help_pane.set_default_material_colors();
             help_pane.set_color(255, 255, 0, 255);
         }
-        help_pane.set_text_string(tab_titles[idx]);
+        help_pane.set_text_string(&tab_titles[idx]);
     });
 
     // Save Defaults Keyhelp
     let name = "SaveDefaults";
     let key = save_defaults_key;
-    let title = "Save Defaults";
+    let title = t!("Save Defaults");
     let key_help_pane = root_pane.find_pane_by_name_recursive(name).unwrap();
     let icon_pane = key_help_pane
         .find_pane_by_name_recursive("set_txt_icon")
@@ -609,19 +612,19 @@ pub unsafe fn draw(root_pane: &Pane) {
         .find_pane_by_name_recursive("set_txt_help")
         .unwrap()
         .as_textbox()
-        .set_text_string(title);
+        .set_text_string(&title);
 
     // Reset Keyhelp
     let name = "ResetDefaults";
     let key = reset_key;
     let title = match app.page {
-        AppPage::SUBMENU => "Reset All",
-        AppPage::SLIDER => "Reset Current",
-        AppPage::TOGGLE => "Reset Current",
-        AppPage::CONFIRMATION => "",
-        AppPage::CLOSE => "",
+        AppPage::SUBMENU => t!("Reset All"),
+        AppPage::SLIDER => t!("Reset Current"),
+        AppPage::TOGGLE => t!("Reset Current"),
+        AppPage::CONFIRMATION => Cow::Borrowed(""),
+        AppPage::CLOSE => Cow::Borrowed(""),
     };
-    if !title.is_empty() {
+    if !&title.is_empty() {
         let key_help_pane = root_pane.find_pane_by_name_recursive(name).unwrap();
         let icon_pane = key_help_pane
             .find_pane_by_name_recursive("set_txt_icon")
@@ -632,7 +635,7 @@ pub unsafe fn draw(root_pane: &Pane) {
             .find_pane_by_name_recursive("set_txt_help")
             .unwrap()
             .as_textbox()
-            .set_text_string(title);
+            .set_text_string(&title);
     }
 
     // Clear Toggle Keyhelp
@@ -644,13 +647,13 @@ pub unsafe fn draw(root_pane: &Pane) {
     if app.should_show_clear_keyhelp() {
         // This is only displayed when you're in a multiple selection toggle menu w/ toggle.max > 1
         let key = clear_toggle_key;
-        let title = "Clear Toggle";
+        let title = t!("Clear Toggle");
         set_icon_text(icon_pane.as_textbox(), &[*key.unwrap()]);
         key_help_pane
             .find_pane_by_name_recursive("set_txt_help")
             .unwrap()
             .as_textbox()
-            .set_text_string(title);
+            .set_text_string(&title);
         icon_pane.set_visible(true);
         key_help_pane.set_visible(true);
     } else {

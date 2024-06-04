@@ -68,7 +68,3 @@ plugin-dependencies = [
 [features]
 outside_training_mode = []
 layout_arc_from_file = []
-
-[package.metadata.i18n]
-default-locale = "en_US"
-load-path = "locales"

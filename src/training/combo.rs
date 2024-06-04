@@ -48,10 +48,10 @@ fn update_frame_advantage(new_frame_adv: i32) {
         FRAME_ADVANTAGE = new_frame_adv;
         if MENU.frame_advantage == OnOff::ON {
             // Prioritize Frame Advantage over Input Recording Playback
-            ui::notifications::clear_notifications("Input Recording");
-            ui::notifications::clear_notifications("Frame Advantage");
+            ui::notifications::clear_notifications(t!("Input Recording"));
+            ui::notifications::clear_notifications(t!("Frame Advantage"));
             ui::notifications::color_notification(
-                "Frame Advantage".to_string(),
+                t!("Frame Advantage").to_string(),
                 format!("{FRAME_ADVANTAGE}"),
                 60,
                 match FRAME_ADVANTAGE {

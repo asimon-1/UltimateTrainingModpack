@@ -85,7 +85,6 @@ pub fn main() {
 
     unsafe {
         EVENT_QUEUE.push(Event::smash_open());
-        notification(t!("Training Modpack").to_string(), "Welcome!".to_string(), 60);
     }
 
     hitbox_visualizer::hitbox_visualization();
@@ -134,33 +133,33 @@ pub fn main() {
     }
 
     unsafe {
-        notification("Training Modpack".to_string(), "Welcome!".to_string(), 60);
+        notification(t!("Training Modpack").to_string(), t!("Welcome!").to_string(), 60);
         notification(
-            "Open Menu".to_string(),
+            t!("Open Menu").to_string(),
             if MENU.menu_open_start_press == OnOff::ON {
-                "Hold Start".to_string()
+                t!("Hold Start").to_string()
             } else {
                 DEFAULT_OPEN_MENU_CONFIG.to_string()
             },
             120,
         );
         notification(
-            "Save State".to_string(),
+            t!("Save State").to_string(),
             MENU.save_state_save.to_string(),
             120,
         );
         notification(
-            "Load State".to_string(),
+            t!("Load State").to_string(),
             MENU.save_state_load.to_string(),
             120,
         );
         notification(
-            "Input Record".to_string(),
+            t!("Input Record").to_string(),
             MENU.input_record.to_string(),
             120,
         );
         notification(
-            "Input Playback".to_string(),
+            t!("Input Playback").to_string(),
             MENU.input_playback.to_string(),
             120,
         );

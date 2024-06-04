@@ -149,7 +149,7 @@ impl<'a> App<'a> {
     }
 
     pub fn should_show_clear_keyhelp(&mut self) -> bool {
-        // Only show the "Clear Toggle" keyhelp if all of the following are true
+        // Only show the 'Clear Toggle' keyhelp if all of the following are true
         // 1. app.page is TOGGLE,
         // 2. selected_submenu.submenu_type is ToggleMultiple
         // 3. the toggle can be set to values greater than 1 (i.e. its not a boolean toggle)

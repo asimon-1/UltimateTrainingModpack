@@ -1,7 +1,7 @@
 #[derive(PartialEq, Eq)]
 pub enum FrameCounterType {
     InGame,
-    // "Reset" occurs when we enter training mode and when we run L+R+A or save state load
+    // 'Reset' occurs when we enter training mode and when we run L+R+A or save state load
     // Some frame counters need in-game frames that do not reset when this occurs
     InGameNoReset,
     Real,

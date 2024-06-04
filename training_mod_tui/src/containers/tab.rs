@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::ser::{SerializeMap, Serializer};
 use serde::Serialize;
 
@@ -5,7 +7,7 @@ use crate::{InputControl, StatefulTable, SubMenu};
 
 #[derive(Clone)]
 pub struct Tab<'a> {
-    pub title: &'a str,
+    pub title: Cow<'a, str>,
     pub id: &'a str,
     pub submenus: StatefulTable<SubMenu<'a>>,
 }

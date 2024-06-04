@@ -204,7 +204,7 @@ unsafe fn handle_recording_for_fighter(module_accessor: &mut BattleObjectModuleA
             lockout_record();
         }
         if INPUT_RECORD == None {
-            clear_notifications("Input Recording");
+            clear_notifications(t!("Input Recording"));
         }
         // Handle recording end
         if (INPUT_RECORD == Record || INPUT_RECORD == Playback)
@@ -239,10 +239,10 @@ unsafe fn handle_recording_for_fighter(module_accessor: &mut BattleObjectModuleA
 
     // Handle Possession Coloring
     if entry_id_int == 1 && POSSESSION == Lockout {
-        clear_notifications("Input Recording");
+        clear_notifications(t!("Input Recording"));
         color_notification(
-            "Input Recording".to_string(),
-            "Lockout".to_owned(),
+            t!("Input Recording").to_string(),
+            t!("Lockout").to_string(),
             60,
             ResColor {
                 r: 8,
@@ -259,10 +259,10 @@ unsafe fn handle_recording_for_fighter(module_accessor: &mut BattleObjectModuleA
             *MODEL_COLOR_TYPE_COLOR_BLEND,
         );
     } else if entry_id_int == 1 && POSSESSION == Standby {
-        clear_notifications("Input Recording");
+        clear_notifications(t!("Input Recording"));
         color_notification(
-            "Input Recording".to_string(),
-            "Standby".to_owned(),
+            t!("Input Recording").to_string(),
+            t!("Standby").to_string(),
             60,
             ResColor {
                 r: 200,
@@ -279,10 +279,10 @@ unsafe fn handle_recording_for_fighter(module_accessor: &mut BattleObjectModuleA
             *MODEL_COLOR_TYPE_COLOR_BLEND,
         );
     } else if entry_id_int == 1 && POSSESSION == Cpu {
-        clear_notifications("Input Recording");
+        clear_notifications(t!("Input Recording"));
         color_notification(
-            "Input Recording".to_string(),
-            "Recording".to_owned(),
+            t!("Input Recording").to_string(),
+            t!("Recording").to_string(),
             60,
             ResColor {
                 r: 200,
@@ -302,10 +302,10 @@ unsafe fn handle_recording_for_fighter(module_accessor: &mut BattleObjectModuleA
         // Displays if the inputs from the current frame were a result of playback
         if INPUT_RECORD_FRAME == 0 || INPUT_RECORD_FRAME == 1 {
             // can be either, seems like a thread issue
-            clear_notifications("Input Recording");
+            clear_notifications(t!("Input Recording"));
             color_notification(
-                "Input Recording".to_string(),
-                "Playback".to_owned(),
+                t!("Input Recording").to_string(),
+                t!("Playback").to_string(),
                 CURRENT_FRAME_LENGTH as u32,
                 ResColor {
                     r: 0,

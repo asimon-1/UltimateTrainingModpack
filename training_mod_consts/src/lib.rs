@@ -2,6 +2,7 @@
 extern crate byteflags;
 extern crate num_derive;
 
+use std::borrow::Cow;
 use serde::{Deserialize, Serialize};
 
 pub mod options;
@@ -826,7 +827,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     mash_tab_submenus.push(to_submenu_reaction_time());
     let mash_tab = Tab {
         id: "mash",
-        title: "Mash Settings",
+        title: Cow::Borrowed("Mash Settings"),
         submenus: StatefulTable::with_items(NX_SUBMENU_ROWS, NX_SUBMENU_COLUMNS, mash_tab_submenus),
     };
     overall_menu.tabs.push(mash_tab);
@@ -848,7 +849,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     override_tab_submenus.push(to_submenu_trump_override());
     let override_tab = Tab {
         id: "override",
-        title: "Override Settings",
+        title: Cow::Borrowed("Override Settings"),
         submenus: StatefulTable::with_items(
             NX_SUBMENU_ROWS,
             NX_SUBMENU_COLUMNS,
@@ -875,7 +876,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     defensive_tab_submenus.push(to_submenu_tech_hide());
     let defensive_tab = Tab {
         id: "defensive",
-        title: "Defensive Settings",
+        title: Cow::Borrowed("Defensive Settings"),
         submenus: StatefulTable::with_items(
             NX_SUBMENU_ROWS,
             NX_SUBMENU_COLUMNS,
@@ -897,7 +898,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     input_recording_tab_submenus.push(to_submenu_playback_loop());
     let input_tab = Tab {
         id: "input",
-        title: "Input Recording",
+        title: Cow::Borrowed("Input Recording"),
         submenus: StatefulTable::with_items(
             NX_SUBMENU_ROWS,
             NX_SUBMENU_COLUMNS,
@@ -915,7 +916,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     button_tab_submenus.push(to_submenu_input_playback());
     let button_tab = Tab {
         id: "button",
-        title: "Button Config",
+        title: Cow::Borrowed("Button Config"),
         submenus: StatefulTable::with_items(
             NX_SUBMENU_ROWS,
             NX_SUBMENU_COLUMNS,
@@ -939,7 +940,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     save_state_tab_submenus.push(to_submenu_buff_state());
     let save_state_tab = Tab {
         id: "save_state",
-        title: "Save States",
+        title: Cow::Borrowed("Save States"),
         submenus: StatefulTable::with_items(
             NX_SUBMENU_ROWS,
             NX_SUBMENU_COLUMNS,
@@ -961,7 +962,7 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     misc_tab_submenus.push(to_submenu_lra_reset());
     let misc_tab = Tab {
         id: "misc",
-        title: "Misc Settings",
+        title: Cow::Borrowed("Misc Settings"),
         submenus: StatefulTable::with_items(NX_SUBMENU_ROWS, NX_SUBMENU_COLUMNS, misc_tab_submenus),
     };
     overall_menu.tabs.push(misc_tab);
