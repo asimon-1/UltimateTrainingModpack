@@ -68,15 +68,20 @@ extern "C" {
 
 #[derive(Serialize, Deserialize, PartialEq, Copy, Clone, Debug)]
 pub enum SaveState {
-    Save,
-    NoAction,
+    Load,
     KillPlayer,
     WaitForAlive,
     PosMove,
-    ApplyBuff,
     NanaPosMove,
-    WaitForPokemonSwitch,
     WaitForCopyAbility,
+    ApplyBuff,
+    WaitForPokemonSwitch,
+    ApplyDamage,
+    ApplyCharge,
+    ApplyItem,
+    Finalize,
+    NoAction,
+    Save,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
@@ -221,7 +226,7 @@ pub unsafe fn end_copy_ability(module_accessor: *mut app::BattleObjectModuleAcce
         save_state_cpu(selected_slot)
     };
     if save_state.state == WaitForCopyAbility {
-        save_state.state = NoAction;
+        save_state.state = ApplyBuff;
     }
 }
 
@@ -465,111 +470,205 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
                 selected_slot
             };
 
-            save_state_player(slot).state = KillPlayer;
-            save_state_cpu(slot).state = KillPlayer;
+            save_state_player(slot).state = SaveState::Load;
+            save_state_cpu(slot).state = SaveState::Load;
         }
         MIRROR_STATE = should_mirror();
-        // end input recording playback
         input_record::stop_playback();
         return;
     }
 
-    // Kill the fighter and move them to camera bounds
-    // Note: Nana shouldn't control her state here. Popo will give a signal to have
-    // Nana move into NanaPosMove once he moves.
-    if save_state.state == KillPlayer && !fighter_is_nana {
-        on_ptrainer_death(module_accessor);
-        if !is_dead(module_accessor) {
-            StatusModule::change_status_force(module_accessor, *FIGHTER_STATUS_KIND_DEAD, true);
-        }
-
-        save_state.state = WaitForAlive;
-
-        return;
+    // Save state
+    if button_config::combo_passes(button_config::ButtonCombo::SaveState) {
+        // Don't begin saving state if Nana's delayed input is captured
+        MIRROR_STATE = 1.0;
+        save_state_player(MENU.save_state_slot.into_idx().unwrap_or(0)).state = Save;
+        save_state_cpu(MENU.save_state_slot.into_idx().unwrap_or(0)).state = Save;
+        notifications::clear_notifications("Save State");
+        notifications::notification(
+            "Save State".to_string(),
+            format!("Saved Slot {}", MENU.save_state_slot),
+            120,
+        );
+        save_state.state = Save;
     }
 
-    if save_state.state == WaitForAlive {
-        on_ptrainer_death(module_accessor);
-        if !is_dead(module_accessor) && !fighter_is_nana {
-            on_death(fighter_kind, module_accessor);
-            save_state.state = PosMove;
-        }
+    if !is_cpu && save_state.state != SaveState::NoAction {
+        dbg!(&save_state.state);
     }
-
-    // move to correct pos
-    if save_state.state == PosMove || save_state.state == NanaPosMove {
-        let status_kind = StatusModule::status_kind(module_accessor);
-        if save_state.state == NanaPosMove
-            && (!fighter_is_nana || (status_kind == FIGHTER_STATUS_KIND_STANDBY))
-        {
-            return;
+    match save_state.state {
+        SaveState::Load => {
+            // Entry point for loading a save state
+            // Only purpose is to move to the next save_state.state
+            save_state.state = KillPlayer;
         }
-        SoundModule::stop_all_sound(module_accessor);
-        MotionAnimcmdModule::set_sleep(module_accessor, false);
-        SoundModule::pause_se_all(module_accessor, false);
-        ControlModule::stop_rumble(module_accessor, false);
-        KineticModule::clear_speed_all(module_accessor);
-
-        let mut pos = if MIRROR_STATE == -1.0 {
-            Vector3f {
-                x: MIRROR_STATE * (save_state.x - get_stage_offset(stage_id())),
-                y: save_state.y,
-                z: 0.0,
+        SaveState::KillPlayer => {
+            // Kill the fighter and move them to camera bounds
+            if !fighter_is_nana {
+                // Note: Nana shouldn't control her state here. Popo will give a signal to have
+                // Nana move into NanaPosMove once he moves.
+                on_ptrainer_death(module_accessor);
+                if !is_dead(module_accessor) {
+                    StatusModule::change_status_force(
+                        module_accessor,
+                        *FIGHTER_STATUS_KIND_DEAD,
+                        true,
+                    );
+                }
+                save_state.state = WaitForAlive;
             }
-        } else {
-            Vector3f {
-                x: save_state.x,
-                y: save_state.y,
-                z: 0.0,
+        }
+        SaveState::WaitForAlive => {
+            on_ptrainer_death(module_accessor);
+            if !is_dead(module_accessor) && !fighter_is_nana {
+                on_death(fighter_kind, module_accessor);
+                save_state.state = PosMove;
             }
-        };
-
-        // Adjust fighter y position if they won't grab ledge when they should
-        adjust_ledge_pos(&mut pos, save_state.fighter_kind, save_state.situation_kind);
-        let lr = MIRROR_STATE * save_state.lr;
-        PostureModule::set_pos(module_accessor, &pos);
-        PostureModule::set_lr(module_accessor, lr);
-        reset::on_reset();
-
-        if save_state.situation_kind == SITUATION_KIND_GROUND {
-            if status != FIGHTER_STATUS_KIND_WAIT {
-                StatusModule::change_status_request(
-                    module_accessor,
-                    *FIGHTER_STATUS_KIND_WAIT,
-                    false,
-                );
-            } else {
-                save_state.state = NoAction;
-            }
-        } else if save_state.situation_kind == SITUATION_KIND_AIR {
-            if status != FIGHTER_STATUS_KIND_FALL {
-                StatusModule::change_status_request(
-                    module_accessor,
-                    *FIGHTER_STATUS_KIND_FALL,
-                    false,
-                );
-            } else {
-                save_state.state = NoAction;
-            }
-        } else if save_state.situation_kind == SITUATION_KIND_CLIFF {
-            if status != FIGHTER_STATUS_KIND_FALL
-                && status != FIGHTER_STATUS_KIND_CLIFF_CATCH_MOVE
-                && status != FIGHTER_STATUS_KIND_CLIFF_CATCH
+        }
+        SaveState::PosMove | SaveState::NanaPosMove => {
+            // move to correct pos
+            let status_kind = StatusModule::status_kind(module_accessor);
+            if save_state.state == NanaPosMove
+                && (!fighter_is_nana || (status_kind == FIGHTER_STATUS_KIND_STANDBY))
             {
-                StatusModule::change_status_request(
-                    module_accessor,
-                    *FIGHTER_STATUS_KIND_FALL,
-                    false,
-                );
-            } else {
-                save_state.state = NoAction;
+                // TODO!(Should this be the next save_state.state?)
+                return;
             }
-        } else {
-            save_state.state = NoAction;
-        }
+            SoundModule::stop_all_sound(module_accessor);
+            MotionAnimcmdModule::set_sleep(module_accessor, false);
+            SoundModule::pause_se_all(module_accessor, false);
+            ControlModule::stop_rumble(module_accessor, false);
+            KineticModule::clear_speed_all(module_accessor);
 
-        // If we're done moving, reset percent, handle charges, and apply buffs
-        if save_state.state == NoAction {
+            let mut pos = if MIRROR_STATE == -1.0 {
+                Vector3f {
+                    x: MIRROR_STATE * (save_state.x - get_stage_offset(stage_id())),
+                    y: save_state.y,
+                    z: 0.0,
+                }
+            } else {
+                Vector3f {
+                    x: save_state.x,
+                    y: save_state.y,
+                    z: 0.0,
+                }
+            };
+
+            // Adjust fighter y position if they won't grab ledge when they should
+            adjust_ledge_pos(&mut pos, save_state.fighter_kind, save_state.situation_kind);
+            let lr = MIRROR_STATE * save_state.lr;
+            PostureModule::set_pos(module_accessor, &pos);
+            PostureModule::set_lr(module_accessor, lr);
+            reset::on_reset();
+
+            match save_state.situation_kind {
+                0 => {
+                    // SITUATION_KIND_GROUND
+                    if status != FIGHTER_STATUS_KIND_WAIT {
+                        StatusModule::change_status_request(
+                            module_accessor,
+                            *FIGHTER_STATUS_KIND_WAIT,
+                            false,
+                        );
+                    } else {
+                        save_state.state = WaitForCopyAbility;
+                    }
+                }
+                2 => {
+                    // SITUATION_KIND_AIR
+                    if status != FIGHTER_STATUS_KIND_FALL {
+                        StatusModule::change_status_request(
+                            module_accessor,
+                            *FIGHTER_STATUS_KIND_FALL,
+                            false,
+                        );
+                    } else {
+                        save_state.state = WaitForCopyAbility;
+                    }
+                }
+                1 => {
+                    // SITUATION_KIND_CLIFF
+                    if status != FIGHTER_STATUS_KIND_FALL
+                        && status != FIGHTER_STATUS_KIND_CLIFF_CATCH_MOVE
+                        && status != FIGHTER_STATUS_KIND_CLIFF_CATCH
+                    {
+                        StatusModule::change_status_request(
+                            module_accessor,
+                            *FIGHTER_STATUS_KIND_FALL,
+                            false,
+                        );
+                    } else {
+                        save_state.state = WaitForCopyAbility;
+                    }
+                }
+                _ => {
+                    save_state.state = WaitForCopyAbility;
+                }
+            }
+
+            // if the fighter is Popo, change the state to one where only Nana can move
+            // This is needed because for some reason, outside of frame by frame mode,
+            // Popo will keep trying to move instead of letting Nana move if you just
+            // change the state back to PosMove
+            let prev_status_kind = StatusModule::prev_status_kind(module_accessor, 0);
+            if prev_status_kind == FIGHTER_STATUS_KIND_REBIRTH && fighter_is_popo {
+                save_state.state = NanaPosMove;
+            }
+
+            // TODO!(Do we want to move these into "finalize"?)
+            // TODO!(Seems weird to put them in the positioning code)
+            if MENU.record_trigger.contains(&RecordTrigger::SAVESTATE) {
+                // if we're recording on state load, record
+                input_record::lockout_record();
+            } else if MENU.save_state_playback.get_random() != PlaybackSlot::empty()
+                && save_state.situation_kind != SITUATION_KIND_CLIFF
+            {
+                // otherwise, begin input recording playback if selected
+                // for ledge, don't do this - if you want playback on a ledge, you have to set it as a ledge option,
+                // otherwise there too many edge cases here
+                input_record::playback(MENU.save_state_playback.get_random().into_idx());
+            }
+        }
+        SaveState::WaitForCopyAbility => {
+            // Wait for Copy Ability to be applied if needed
+            if fighter_kind == FIGHTER_KIND_KIRBY {
+                let is_copy_start = WorkModule::is_flag(module_accessor, 0x20000104); // *FIGHTER_KIRBY_INSTANCE_WORK_ID_FLAG_COPY_ON_START
+                if !is_copy_start {
+                    save_state.state = ApplyBuff;
+                }
+            } else {
+                save_state.state = ApplyBuff;
+            }
+        }
+        SaveState::ApplyBuff => {
+            // Buff the fighter if they're one of the fighters who can be buffed
+            // needs its own save_state.state since this may take multiple frames, want it to loop
+            if fighter_is_buffable {
+                if buff::handle_buffs(module_accessor, fighter_kind, status) {
+                    // returns true when done buffing fighter
+                    buff::restart_buff(module_accessor);
+                    // set is_buffing back to false when done
+                    save_state.state = WaitForPokemonSwitch;
+                }
+            } else {
+                save_state.state = WaitForPokemonSwitch;
+            }
+        }
+        SaveState::WaitForPokemonSwitch => {
+            // If we switched last frame, artifacts and sound should be cleaned up, so transition into ApplyDamage
+            if fighter_is_ptrainer {
+                WorkModule::on_flag(
+                    ptrainer::get_ptrainer_module_accessor(module_accessor),
+                    *WEAPON_PTRAINER_PTRAINER_INSTANCE_WORK_ID_FLAG_ENABLE_CHANGE_POKEMON,
+                );
+                if ptrainer::is_switched(ptrainer::get_ptrainer_module_accessor(module_accessor)) {
+                    save_state.state = ApplyDamage;
+                }
+            } else {
+                save_state.state = ApplyDamage;
+            }
+        }
+        SaveState::ApplyDamage => {
             // Set damage of the save state
             if !is_cpu {
                 match MENU.save_damage_player {
@@ -610,28 +709,29 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
                     ),
                 }
             }
-
-            // Set to held item
-            if !is_cpu && !fighter_is_nana && MENU.character_item != CharacterItem::NONE {
-                apply_item(MENU.character_item);
-            }
-
+            save_state.state = ApplyCharge;
+        }
+        SaveState::ApplyCharge => {
             // Set the charge of special moves if the fighter matches the kind in the save state
             if save_state.fighter_kind == fighter_kind {
                 charge::handle_charge(module_accessor, fighter_kind, save_state.charge);
-                // If we ever want to buff kirby, we have to move this to after apply buff
-                if fighter_kind == FIGHTER_KIND_KIRBY {
-                    save_state.state = WaitForCopyAbility;
-                }
             }
-            // Buff the fighter if they're one of the fighters who can be buffed
-            if fighter_is_buffable {
-                save_state.state = ApplyBuff;
-            }
+
             // Perform fighter specific loading actions
             save_state.steve_state.map(|load_steve| {
                 steve::load_steve_state(module_accessor, load_steve);
             });
+
+            save_state.state = ApplyItem;
+        }
+        SaveState::ApplyItem => {
+            // Set to held item
+            if !is_cpu && !fighter_is_nana && MENU.character_item != CharacterItem::NONE {
+                apply_item(MENU.character_item);
+            }
+            save_state.state = Finalize;
+        }
+        SaveState::Finalize => {
             // Play Training Reset SFX, since silence is eerie
             // Only play for the CPU so we don't have 2 overlapping
             if is_cpu {
@@ -642,123 +742,60 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
                     true,
                 );
             }
-            if fighter_is_ptrainer {
-                WorkModule::on_flag(
-                    ptrainer::get_ptrainer_module_accessor(module_accessor),
-                    *WEAPON_PTRAINER_PTRAINER_INSTANCE_WORK_ID_FLAG_ENABLE_CHANGE_POKEMON,
+            save_state.state = NoAction;
+        }
+        SaveState::NoAction => {
+            // Not saving or loading a state, don't do anything
+        }
+        SaveState::Save => {
+            if fighter_is_nana {
+                // Don't save states with Nana. Should already be fine, just a safety.
+                return;
+            } else {
+                save_state.state = Load;
+                save_state.x = PostureModule::pos_x(module_accessor);
+                save_state.y = PostureModule::pos_y(module_accessor);
+                save_state.lr = PostureModule::lr(module_accessor);
+                save_state.percent = DamageModule::damage(module_accessor, 0);
+                save_state.situation_kind = StatusModule::situation_kind(module_accessor);
+
+                // Always store fighter kind so that charges are handled properly
+                save_state.fighter_kind = app::utility::get_kind(module_accessor);
+                save_state.charge = charge::get_charge(module_accessor, fighter_kind);
+                // Perform fighter specific saving actions
+                save_state.steve_state = steve::save_steve_state(module_accessor);
+
+                let zeros = Vector3f {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                };
+
+                EffectModule::req_on_joint(
+                    module_accessor,
+                    Hash40::new("sys_deku_flash"),
+                    Hash40::new("top"),
+                    &zeros,
+                    &zeros,
+                    0.25,
+                    &zeros,
+                    &zeros,
+                    true,
+                    *EFFECT_SUB_ATTRIBUTE_NO_JOINT_SCALE as u32
+                        | *EFFECT_SUB_ATTRIBUTE_FOLLOW as u32
+                        | *EFFECT_SUB_ATTRIBUTE_CONCLUDE_STATUS as u32,
+                    0,
+                    0,
                 );
-                save_state.state = WaitForPokemonSwitch;
+
+                // If both chars finished saving by now
+                if save_state_player(selected_slot).state != Save
+                    && save_state_cpu(selected_slot).state != Save
+                {
+                    save_to_file();
+                }
             }
-        }
-
-        // if the fighter is Popo, change the state to one where only Nana can move
-        // This is needed because for some reason, outside of frame by frame mode,
-        // Popo will keep trying to move instead of letting Nana move if you just
-        // change the state back to PosMove
-        let prev_status_kind = StatusModule::prev_status_kind(module_accessor, 0);
-        if prev_status_kind == FIGHTER_STATUS_KIND_REBIRTH && fighter_is_popo {
-            save_state.state = NanaPosMove;
-        }
-
-        // if we're recording on state load, record
-        if MENU.record_trigger.contains(&RecordTrigger::SAVESTATE) {
-            input_record::lockout_record();
-            return;
-        }
-        // otherwise, begin input recording playback if selected
-        // for ledge, don't do this - if you want playback on a ledge, you have to set it as a ledge option,
-        // otherwise there too many edge cases here
-        else if MENU.save_state_playback.get_random() != PlaybackSlot::empty()
-            && save_state.situation_kind != SITUATION_KIND_CLIFF
-        {
-            input_record::playback(MENU.save_state_playback.get_random().into_idx());
-        }
-
-        return;
-    }
-
-    if save_state.state == ApplyBuff {
-        // needs its own save_state.state since this may take multiple frames, want it to loop
-        if buff::handle_buffs(module_accessor, fighter_kind, status) {
-            // returns true when done buffing fighter
-            buff::restart_buff(module_accessor);
-            // set is_buffing back to false when done
             save_state.state = NoAction;
-        }
-    }
-
-    // If we switched last frame, artifacts and sound should be cleaned up, so transition into NoAction
-    if save_state.state == WaitForPokemonSwitch
-        && ptrainer::is_switched(ptrainer::get_ptrainer_module_accessor(module_accessor))
-    {
-        save_state.state = NoAction;
-    }
-
-    // Wait for Copy Ability to be applied if needed, exit otherwise
-    if save_state.state == WaitForCopyAbility {
-        let is_copy_start = WorkModule::is_flag(module_accessor, 0x20000104); // *FIGHTER_KIRBY_INSTANCE_WORK_ID_FLAG_COPY_ON_START
-        if !is_copy_start {
-            save_state.state = NoAction;
-        }
-    }
-
-    // Save state
-    if button_config::combo_passes(button_config::ButtonCombo::SaveState) {
-        // Don't begin saving state if Nana's delayed input is captured
-        MIRROR_STATE = 1.0;
-        save_state_player(MENU.save_state_slot.into_idx().unwrap_or(0)).state = Save;
-        save_state_cpu(MENU.save_state_slot.into_idx().unwrap_or(0)).state = Save;
-        notifications::clear_notifications("Save State");
-        notifications::notification(
-            "Save State".to_string(),
-            format!("Saved Slot {}", MENU.save_state_slot),
-            120,
-        );
-    }
-
-    if save_state.state == Save && !fighter_is_nana {
-        // Don't save states with Nana. Should already be fine, just a safety.
-        save_state.state = NoAction;
-        save_state.x = PostureModule::pos_x(module_accessor);
-        save_state.y = PostureModule::pos_y(module_accessor);
-        save_state.lr = PostureModule::lr(module_accessor);
-        save_state.percent = DamageModule::damage(module_accessor, 0);
-        save_state.situation_kind = StatusModule::situation_kind(module_accessor);
-
-        // Always store fighter kind so that charges are handled properly
-        save_state.fighter_kind = app::utility::get_kind(module_accessor);
-        save_state.charge = charge::get_charge(module_accessor, fighter_kind);
-        // Perform fighter specific saving actions
-        save_state.steve_state = steve::save_steve_state(module_accessor);
-
-        let zeros = Vector3f {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-
-        EffectModule::req_on_joint(
-            module_accessor,
-            Hash40::new("sys_deku_flash"),
-            Hash40::new("top"),
-            &zeros,
-            &zeros,
-            0.25,
-            &zeros,
-            &zeros,
-            true,
-            *EFFECT_SUB_ATTRIBUTE_NO_JOINT_SCALE as u32
-                | *EFFECT_SUB_ATTRIBUTE_FOLLOW as u32
-                | *EFFECT_SUB_ATTRIBUTE_CONCLUDE_STATUS as u32,
-            0,
-            0,
-        );
-
-        // If both chars finished saving by now
-        if save_state_player(selected_slot).state != Save
-            && save_state_cpu(selected_slot).state != Save
-        {
-            save_to_file();
         }
     }
 }
