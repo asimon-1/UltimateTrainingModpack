@@ -143,7 +143,11 @@ fn once_per_frame_per_fighter(module_accessor: &mut BattleObjectModuleAccessor, 
 
         combo::get_command_flag_cat(module_accessor);
         hitbox_visualizer::get_command_flag_cat(module_accessor);
-        save_states::save_states(module_accessor);
+        save_states::load_save_state_condition(module_accessor);
+        save_states::load_save_state(module_accessor);
+        if save_states::create_save_state_condition() {
+            save_states::create_save_state();
+        }
         tech::get_command_flag_cat(module_accessor);
         clatter::handle_clatter(module_accessor);
     }

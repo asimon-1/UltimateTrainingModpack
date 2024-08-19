@@ -9,7 +9,7 @@ use smash::hash40;
 use smash::lib::lua_const::*;
 use smash::phx::{Hash40, Vector3f};
 use std::ptr;
-use training_mod_consts::{CharacterItem, SaveDamage, SaveStateSlot};
+use training_mod_consts::{CharacterItem, SaveDamage};
 
 use SaveState::*;
 
@@ -27,6 +27,7 @@ use crate::common::get_module_accessor;
 use crate::common::is_dead;
 use crate::common::MENU;
 use crate::is_operation_cpu;
+//use crate::logging::*;
 use crate::training::buff;
 use crate::training::character_specific::{ptrainer, steve};
 use crate::training::charge::{self, ChargeState};
@@ -81,7 +82,6 @@ pub enum SaveState {
     ApplyItem,
     Finalize,
     NoAction,
-    Save,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
@@ -194,13 +194,12 @@ unsafe fn save_state_cpu(slot: usize) -> &'static mut SavedState {
 pub unsafe fn get_state_pokemon(
     ptrainer_module_accessor: *mut app::BattleObjectModuleAccessor,
 ) -> u32 {
-    let selected_slot = get_slot();
     let pokemon_module_accessor = ptrainer::get_pokemon_module_accessor(ptrainer_module_accessor);
     let cpu_module_accessor = get_module_accessor(FighterId::CPU);
     let fighter_kind = if !ptr::eq(pokemon_module_accessor, cpu_module_accessor) {
-        save_state_player(selected_slot).fighter_kind
+        save_state_player(SLOT_TO_LOAD).fighter_kind
     } else {
-        save_state_cpu(selected_slot).fighter_kind
+        save_state_cpu(SLOT_TO_LOAD).fighter_kind
     };
     (fighter_kind - *FIGHTER_KIND_PZENIGAME) as u32
 }
@@ -208,22 +207,20 @@ pub unsafe fn get_state_pokemon(
 pub unsafe fn get_charge_state(
     module_accessor: *mut app::BattleObjectModuleAccessor,
 ) -> ChargeState {
-    let selected_slot = get_slot();
     let cpu_module_accessor = get_module_accessor(FighterId::CPU);
     if !ptr::eq(module_accessor, cpu_module_accessor) {
-        save_state_player(selected_slot).charge
+        save_state_player(SLOT_TO_LOAD).charge
     } else {
-        save_state_cpu(selected_slot).charge
+        save_state_cpu(SLOT_TO_LOAD).charge
     }
 }
 
 pub unsafe fn end_copy_ability(module_accessor: *mut app::BattleObjectModuleAccessor) {
-    let selected_slot = get_slot();
     let cpu_module_accessor = get_module_accessor(FighterId::CPU);
     let save_state = if !ptr::eq(module_accessor, cpu_module_accessor) {
-        save_state_player(selected_slot)
+        save_state_player(SLOT_TO_LOAD)
     } else {
-        save_state_cpu(selected_slot)
+        save_state_cpu(SLOT_TO_LOAD)
     };
     if save_state.state == WaitForCopyAbility {
         save_state.state = ApplyBuff;
@@ -234,29 +231,22 @@ pub unsafe fn end_copy_ability(module_accessor: *mut app::BattleObjectModuleAcce
 // MIRROR_STATE == -1 -> Do Mirror
 static mut MIRROR_STATE: f32 = 1.0;
 
-static mut RANDOM_SLOT: usize = 0;
+static mut SLOT_TO_LOAD: usize = 0;
 
-unsafe fn get_slot() -> usize {
-    let random_slot = MENU.randomize_slots.get_random();
-    if random_slot != SaveStateSlot::empty() {
-        RANDOM_SLOT
-    } else {
-        MENU.save_state_slot.into_idx().unwrap_or(0)
-    }
+unsafe fn roll_slot_to_load() {
+    SLOT_TO_LOAD = MENU.randomize_slots.get_random().into_idx().unwrap_or(0);
 }
 
 pub unsafe fn is_killing() -> bool {
-    let selected_slot = get_slot();
-    (save_state_player(selected_slot).state == KillPlayer
-        || save_state_player(selected_slot).state == WaitForAlive)
-        || (save_state_cpu(selected_slot).state == KillPlayer
-            || save_state_cpu(selected_slot).state == WaitForAlive)
+    (save_state_player(SLOT_TO_LOAD).state == KillPlayer
+        || save_state_player(SLOT_TO_LOAD).state == WaitForAlive)
+        || (save_state_cpu(SLOT_TO_LOAD).state == KillPlayer
+            || save_state_cpu(SLOT_TO_LOAD).state == WaitForAlive)
 }
 
 pub unsafe fn is_loading() -> bool {
-    let selected_slot = get_slot();
-    save_state_player(selected_slot).state != NoAction
-        || save_state_cpu(selected_slot).state != NoAction
+    save_state_player(SLOT_TO_LOAD).state != NoAction
+        || save_state_cpu(SLOT_TO_LOAD).state != NoAction
 }
 
 pub unsafe fn should_mirror() -> f32 {
@@ -420,19 +410,49 @@ pub unsafe fn on_death(fighter_kind: i32, module_accessor: &mut app::BattleObjec
     }
 }
 
-pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor) {
+pub unsafe fn load_save_state_condition(module_accessor: &mut app::BattleObjectModuleAccessor) {
+    // This doesn't return a bool because the load_save_state() function takes multiple frames to finish executing
+    // Instead, this function starts the "load" by setting the "state" field for SLOT_TO_LOAD
+
+    // Don't load save states if the user has it disabled
     if MENU.save_state_enable == OnOff::OFF {
         return;
     }
 
-    let selected_slot = get_slot();
+    // Don't load save states when Nana dies or happens to hit the button combo
+    let fighter_is_nana = app::utility::get_kind(module_accessor) == *FIGHTER_KIND_NANA;
+    if fighter_is_nana {
+        return;
+    }
+
+    // Don't load save states if we're already in the middle of loading one
+    if is_loading() {
+        return;
+    }
+
+    // Check conditions
+    let autoload_reset = MENU.save_state_autoload == OnOff::ON
+        && is_dead(module_accessor);
+    let triggered_reset = button_config::combo_passes(button_config::ButtonCombo::LoadState)
+        && !is_operation_cpu(module_accessor)
+        && !fighter_is_nana;
+    if autoload_reset || triggered_reset {
+        roll_slot_to_load();
+        save_state_player(SLOT_TO_LOAD).state = SaveState::Load;
+        save_state_cpu(SLOT_TO_LOAD).state = SaveState::Load;
+        MIRROR_STATE = should_mirror();
+        input_record::stop_playback();
+    }
+}
+
+pub unsafe fn load_save_state(module_accessor: &mut app::BattleObjectModuleAccessor) {
     let status = StatusModule::status_kind(module_accessor);
     let is_cpu = WorkModule::get_int(module_accessor, *FIGHTER_INSTANCE_WORK_ID_INT_ENTRY_ID)
         == FighterId::CPU as i32;
     let save_state = if is_cpu {
-        save_state_cpu(selected_slot)
+        save_state_cpu(SLOT_TO_LOAD)
     } else {
-        save_state_player(selected_slot)
+        save_state_player(SLOT_TO_LOAD)
     };
 
     let fighter_kind = app::utility::get_kind(module_accessor);
@@ -451,47 +471,6 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
         *FIGHTER_KIND_WARIO,
     ]
     .contains(&fighter_kind);
-
-    // Reset state
-    let autoload_reset = MENU.save_state_autoload == OnOff::ON
-        && save_state.state == NoAction
-        && is_dead(module_accessor);
-    let mut triggered_reset: bool = false;
-    if !is_operation_cpu(module_accessor) && !fighter_is_nana {
-        triggered_reset = button_config::combo_passes(button_config::ButtonCombo::LoadState);
-    }
-    if (autoload_reset || triggered_reset) && !fighter_is_nana {
-        if save_state.state == NoAction {
-            let random_slot = MENU.randomize_slots.get_random();
-            let slot = if random_slot != SaveStateSlot::empty() {
-                RANDOM_SLOT = random_slot.into_idx().unwrap_or(0);
-                RANDOM_SLOT
-            } else {
-                selected_slot
-            };
-
-            save_state_player(slot).state = SaveState::Load;
-            save_state_cpu(slot).state = SaveState::Load;
-        }
-        MIRROR_STATE = should_mirror();
-        input_record::stop_playback();
-        return;
-    }
-
-    // Save state
-    if button_config::combo_passes(button_config::ButtonCombo::SaveState) {
-        // Don't begin saving state if Nana's delayed input is captured
-        MIRROR_STATE = 1.0;
-        save_state_player(MENU.save_state_slot.into_idx().unwrap_or(0)).state = Save;
-        save_state_cpu(MENU.save_state_slot.into_idx().unwrap_or(0)).state = Save;
-        notifications::clear_notifications("Save State");
-        notifications::notification(
-            "Save State".to_string(),
-            format!("Saved Slot {}", MENU.save_state_slot),
-            120,
-        );
-        save_state.state = Save;
-    }
 
     if !is_cpu && save_state.state != SaveState::NoAction {
         dbg!(&save_state.state);
@@ -747,56 +726,6 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
         SaveState::NoAction => {
             // Not saving or loading a state, don't do anything
         }
-        SaveState::Save => {
-            if fighter_is_nana {
-                // Don't save states with Nana. Should already be fine, just a safety.
-                return;
-            } else {
-                save_state.state = Load;
-                save_state.x = PostureModule::pos_x(module_accessor);
-                save_state.y = PostureModule::pos_y(module_accessor);
-                save_state.lr = PostureModule::lr(module_accessor);
-                save_state.percent = DamageModule::damage(module_accessor, 0);
-                save_state.situation_kind = StatusModule::situation_kind(module_accessor);
-
-                // Always store fighter kind so that charges are handled properly
-                save_state.fighter_kind = app::utility::get_kind(module_accessor);
-                save_state.charge = charge::get_charge(module_accessor, fighter_kind);
-                // Perform fighter specific saving actions
-                save_state.steve_state = steve::save_steve_state(module_accessor);
-
-                let zeros = Vector3f {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                };
-
-                EffectModule::req_on_joint(
-                    module_accessor,
-                    Hash40::new("sys_deku_flash"),
-                    Hash40::new("top"),
-                    &zeros,
-                    &zeros,
-                    0.25,
-                    &zeros,
-                    &zeros,
-                    true,
-                    *EFFECT_SUB_ATTRIBUTE_NO_JOINT_SCALE as u32
-                        | *EFFECT_SUB_ATTRIBUTE_FOLLOW as u32
-                        | *EFFECT_SUB_ATTRIBUTE_CONCLUDE_STATUS as u32,
-                    0,
-                    0,
-                );
-
-                // If both chars finished saving by now
-                if save_state_player(selected_slot).state != Save
-                    && save_state_cpu(selected_slot).state != Save
-                {
-                    save_to_file();
-                }
-            }
-            save_state.state = NoAction;
-        }
     }
 }
 
@@ -836,4 +765,76 @@ fn adjust_ledge_pos(pos: &mut Vector3f, fighter_kind: i32, situation_kind: i32) 
     if fighter_needs_ledge_adjust_slight {
         pos.y += 2.0;
     }
+}
+
+pub unsafe fn create_save_state_condition() -> bool {
+    button_config::combo_passes(button_config::ButtonCombo::SaveState)
+}
+
+pub unsafe fn create_save_state() {
+    notifications::clear_notifications("Save State");
+    notifications::notification(
+        "Save State".to_string(),
+        format!("Saved Slot {}", MENU.save_state_slot),
+        120,
+    );
+    let slot_to_save = MENU.save_state_slot.into_idx().unwrap_or(0);
+    info!("Saving save state slot {}...", slot_to_save + 1);
+    for (save_state, module_accessor) in [
+        (
+            save_state_cpu(slot_to_save),
+            &mut *get_module_accessor(FighterId::CPU),
+        ),
+        (
+            save_state_player(slot_to_save),
+            &mut *get_module_accessor(FighterId::Player),
+        ),
+    ] {
+        let fighter_kind = app::utility::get_kind(module_accessor);
+        let fighter_is_nana = fighter_kind == *FIGHTER_KIND_NANA;
+        if fighter_is_nana {
+            // Don't save states with Nana. Should already be fine, just a safety.
+            return;
+        } else {
+            save_state.state = NoAction;
+            save_state.x = PostureModule::pos_x(module_accessor);
+            save_state.y = PostureModule::pos_y(module_accessor);
+            save_state.lr = PostureModule::lr(module_accessor);
+            save_state.percent = DamageModule::damage(module_accessor, 0);
+            save_state.situation_kind = StatusModule::situation_kind(module_accessor);
+
+            // Always store fighter kind so that charges are handled properly
+            save_state.fighter_kind = app::utility::get_kind(module_accessor);
+            save_state.charge = charge::get_charge(module_accessor, fighter_kind);
+            // Perform fighter specific saving actions
+            save_state.steve_state = steve::save_steve_state(module_accessor);
+
+            let zeros = Vector3f {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
+
+            EffectModule::req_on_joint(
+                module_accessor,
+                Hash40::new("sys_deku_flash"),
+                Hash40::new("top"),
+                &zeros,
+                &zeros,
+                0.25,
+                &zeros,
+                &zeros,
+                true,
+                *EFFECT_SUB_ATTRIBUTE_NO_JOINT_SCALE as u32
+                    | *EFFECT_SUB_ATTRIBUTE_FOLLOW as u32
+                    | *EFFECT_SUB_ATTRIBUTE_CONCLUDE_STATUS as u32,
+                0,
+                0,
+            );
+        }
+    }
+    info!("Committing save states to file");
+    save_to_file();
+    info!("Done saving states.");
+    return;
 }
