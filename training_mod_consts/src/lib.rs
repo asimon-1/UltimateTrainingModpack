@@ -933,8 +933,8 @@ pub unsafe fn create_app<'a>() -> App<'a> {
     save_state_tab_submenus.push(to_submenu_save_damage_player());
     save_state_tab_submenus.push(to_submenu_save_damage_limits_player());
     save_state_tab_submenus.push(to_submenu_save_state_enable());
-    save_state_tab_submenus.push(to_submenu_save_state_slot());
-    save_state_tab_submenus.push(to_submenu_randomize_slots());
+    save_state_tab_submenus.push(to_submenu_save_slot_to_save());
+    save_state_tab_submenus.push(to_submenu_save_slot_to_load());
     save_state_tab_submenus.push(to_submenu_character_item());
     save_state_tab_submenus.push(to_submenu_buff_state());
     let save_state_tab = Tab {
