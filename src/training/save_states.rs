@@ -234,7 +234,7 @@ static mut MIRROR_STATE: f32 = 1.0;
 static mut SLOT_TO_LOAD: usize = 0;
 
 unsafe fn roll_slot_to_load() {
-    SLOT_TO_LOAD = MENU.randomize_slots.get_random().into_idx().unwrap_or(0);
+    SLOT_TO_LOAD = MENU.save_slot_to_load.get_random().into_idx().unwrap_or(0);
 }
 
 pub unsafe fn is_killing() -> bool {
@@ -775,10 +775,10 @@ pub unsafe fn create_save_state() {
     notifications::clear_notifications("Save State");
     notifications::notification(
         "Save State".to_string(),
-        format!("Saved Slot {}", MENU.save_state_slot),
+        format!("Saved Slot {}", MENU.save_slot_to_save),
         120,
     );
-    let slot_to_save = MENU.save_state_slot.into_idx().unwrap_or(0);
+    let slot_to_save = MENU.save_slot_to_save.into_idx().unwrap_or(0);
     info!("Saving save state slot {}...", slot_to_save + 1);
     for (save_state, module_accessor) in [
         (
