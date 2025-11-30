@@ -1,4 +1,5 @@
 use smash::app::{self, lua_bind::*};
+use smash::hash40;
 use smash::lib::lua_const::*;
 
 use crate::common::consts::*;
@@ -155,19 +156,30 @@ pub unsafe fn get_command_flag_cat(
     module_accessor: &mut app::BattleObjectModuleAccessor,
     category: i32,
 ) -> i32 {
-    // Only do once per frame
-    if category != FIGHTER_PAD_COMMAND_CATEGORY1 {
-        return 0;
-    }
-
     if !is_operation_cpu(module_accessor) {
         return 0;
     }
 
-    check_buffer(module_accessor);
-    // Make sure our dash transition variable is the correct value
-    dash_transition_check(module_accessor);
-    perform_action(module_accessor)
+    if category == FIGHTER_PAD_COMMAND_CATEGORY1 {
+        check_buffer(module_accessor);
+        // Make sure our dash transition variable is the correct value
+        dash_transition_check(module_accessor);
+        perform_action(module_accessor)
+    } else if category == FIGHTER_PAD_COMMAND_CATEGORY2 {
+        // Throws
+        // handled in throw.rs
+        0
+    } else if category == FIGHTER_PAD_COMMAND_CATEGORY3 {
+        // Items
+        get_current_buffer().into_cmd_cat3_flag()
+    } else if category == FIGHTER_PAD_COMMAND_CATEGORY4 {
+        // Special Inputs
+        // TODO
+        0
+    } else {
+        // Shouldn't happen, there are only four catgories
+        0
+    }
 }
 
 unsafe fn check_buffer(module_accessor: &mut app::BattleObjectModuleAccessor) {
@@ -303,7 +315,31 @@ pub fn external_buffer_menu_mash(action: Action) {
 
 unsafe fn perform_action(module_accessor: &mut app::BattleObjectModuleAccessor) -> i32 {
     let action = get_current_buffer();
+    let ground_item_toss = ItemModule::is_have_item(module_accessor, 0)
+        && action.is_ground_attack()
+        && is_grounded(module_accessor);
+    let air_item_toss = ItemModule::is_have_item(module_accessor, 0)
+        && action.is_aerial()
+        && is_airborne(module_accessor);
+
     match action {
+        _ if ground_item_toss => {
+            let transition = *FIGHTER_STATUS_TRANSITION_TERM_ID_CONT_ITEM_THROW;
+            let status = *FIGHTER_STATUS_KIND_ITEM_THROW;
+            set_item_throw_flags(module_accessor, action);
+            try_change_status(module_accessor, status, transition);
+            get_flag(module_accessor, status, 0)
+        }
+        _ if air_item_toss => {
+            // No need for special jump handling, we will rely on the jump logic in get_aerial_flag
+            // since air_item_toss = false when grounded
+            // TODO: Make sure this respects
+            let transition = *FIGHTER_STATUS_TRANSITION_TERM_ID_CONT_ITEM_THROW;
+            let status = *FIGHTER_STATUS_KIND_ITEM_THROW;
+            set_item_throw_flags(module_accessor, action);
+            try_change_status(module_accessor, status, transition);
+            get_flag(module_accessor, status, 0)
+        }
         Action::AIR_DODGE => {
             let (expected_status, command_flag) = if is_grounded(module_accessor) {
                 // Shield if grounded instead
@@ -638,4 +674,115 @@ fn try_change_status(
     }
 
     true
+}
+
+unsafe fn set_item_throw_flags(
+    module_accessor: &mut app::BattleObjectModuleAccessor,
+    action: Action,
+) {
+    // Used in ItemThrowLightMotionDecision and ItemThrowLightMotionDecisionAir
+    match action {
+        Action::F_SMASH => {
+            WorkModule::on_flag(module_accessor, *FIGHTER_INSTANCE_WORK_ID_FLAG_ITEM_THROW_4);
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_f4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::U_SMASH => {
+            WorkModule::on_flag(module_accessor, *FIGHTER_INSTANCE_WORK_ID_FLAG_ITEM_THROW_4);
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_hi4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::D_SMASH => {
+            WorkModule::on_flag(module_accessor, *FIGHTER_INSTANCE_WORK_ID_FLAG_ITEM_THROW_4);
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_lw4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::JAB => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_f") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::F_TILT => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_f") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::U_TILT => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_hi") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::D_TILT => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_lw") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::DASH_ATTACK => {
+            // TODO
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_f") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::NAIR => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_air_f4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::FAIR => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_air_f4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::BAIR => {
+            // TODO: fix direction of item toss
+            WorkModule::set_float(
+                module_accessor,
+                -PostureModule::lr(module_accessor),
+                *FIGHTER_STATUS_ITEM_THROW_WORK_FLOAT_LR,
+            );
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_air_b4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::UAIR => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_air_hi4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        Action::DAIR => {
+            WorkModule::set_int64(
+                module_accessor,
+                hash40("item_light_throw_air_lw4") as i64,
+                *FIGHTER_STATUS_ITEM_THROW_WORK_INT_MOTION_KIND,
+            );
+        }
+        _ => {}
+    };
 }

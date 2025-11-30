@@ -402,6 +402,53 @@ impl Action {
             _ => panic!("Invalid Action playback slot: {}", self.to_string()),
         }
     }
+
+    pub fn is_ground_attack(&self) -> bool {
+        [
+            Action::F_SMASH,
+            Action::U_SMASH,
+            Action::D_SMASH,
+            Action::JAB,
+            Action::F_TILT,
+            Action::U_TILT,
+            Action::D_TILT,
+            Action::DASH_ATTACK,
+        ]
+        .contains(&self)
+    }
+
+    pub fn is_aerial(&self) -> bool {
+        [
+            Action::NAIR,
+            Action::FAIR,
+            Action::BAIR,
+            Action::UAIR,
+            Action::DAIR,
+        ]
+        .contains(&self)
+    }
+
+    pub fn into_cmd_cat3_flag(self) -> i32 {
+        // TODO: Should aerials use the smash toss versions?
+        // e.g. FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_AIR_FB4
+        match self {
+            Action::AIR_DODGE=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_DROP_AIR,
+            Action::NAIR=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_AIR_FB,
+            Action::FAIR=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_AIR_FB,
+            Action::BAIR=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_AIR_FB,
+            Action::UAIR=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_AIR_HI,
+            Action::DAIR=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_AIR_LW,
+            Action::F_SMASH=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_FB4,
+            Action::U_SMASH=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_HI4,
+            Action::D_SMASH=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_LW4,
+            Action::JAB=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_FB,
+            Action::F_TILT=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_FB,
+            Action::U_TILT => *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_HI,
+            Action::D_TILT => *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_LW,
+            Action::DASH_ATTACK=> *FIGHTER_PAD_CMD_CAT3_FLAG_ITEM_LIGHT_THROW_FB4, // TODO this needs special handling I think
+            _ => 0,
+        }
+    }
 }
 byteflags! {
     pub struct AttackAngle {
